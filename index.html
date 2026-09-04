@@ -20,6 +20,8 @@
     .answer{background:#fff;border:2px solid #d5ccbe;border-radius:14px;text-align:left;padding:18px;font-weight:750;min-height:76px;transition:.15s}.answer:hover:not(:disabled){border-color:var(--vino);transform:translateY(-2px)}.answer:disabled{cursor:default}.answer.correct{background:#dcefe7;border-color:var(--verde)}.answer.wrong{background:#f3dce1;border-color:var(--rojo)}
     .feedback{display:none;border-left:6px solid var(--vino);background:#e8e0d2;padding:17px 20px;border-radius:8px;margin:18px 0}.feedback.show{display:block}.feedback strong{display:block;margin-bottom:6px}.next{display:none}.next.show{display:inline-block}
     .result{text-align:center;padding:20px 0 35px}.big-score{font-family:Georgia,serif;color:var(--vino);font-size:clamp(4rem,12vw,8rem);font-weight:800;line-height:1}.result-message{font-size:1.25rem;font-weight:800;margin:12px 0 28px}
+    .name-input{display:block;width:min(480px,100%);padding:15px 17px;border:2px solid #c9bead;border-radius:12px;background:#fff;font:inherit;font-size:1.05rem;margin:22px 0 14px}.name-input:focus{outline:3px solid #dca9b8;border-color:var(--vino)}
+    .error{min-height:22px;color:var(--rojo);font-weight:750;margin:0 0 9px}.leaderboard{max-width:680px;margin:30px auto 0;text-align:left;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #d4cabc}.leaderboard h3{margin:0;background:var(--oscuro);color:#fff;padding:16px 20px;font-family:Georgia,serif}.leaderboard table{width:100%;border-collapse:collapse}.leaderboard th,.leaderboard td{padding:12px 16px;border-bottom:1px solid #e4ddd2}.leaderboard th{color:var(--gris);font-size:.78rem;text-transform:uppercase;letter-spacing:.08em}.leaderboard tr.me{background:#f3dce4;font-weight:800}.reset-note{text-align:center;color:var(--gris);font-size:.88rem;padding:12px}
     footer{padding:15px 30px;background:#e6dece;color:var(--gris);font-size:.82rem;display:flex;justify-content:space-between}
     @media(max-width:650px){header{padding:18px}.brand{font-size:1.05rem}main{padding:24px 18px}.answers{grid-template-columns:1fr}.answer{min-height:62px}footer{padding:12px 18px}}
   </style>
@@ -33,6 +35,9 @@
       <h1>Hecho o<br>manipulación</h1>
       <p class="intro">Poné a prueba lo aprendido sobre la reforma agraria, la United Fruit Company y la construcción propagandística del conflicto guatemalteco.</p>
       <div class="meta"><span class="pill">10 preguntas</span><span class="pill">Respuesta inmediata</span><span class="pill">5–10 minutos</span></div>
+      <label for="playerName"><strong>Escribí tu nombre para jugar</strong></label>
+      <input class="name-input" id="playerName" maxlength="28" autocomplete="name" placeholder="Nombre del estudiante">
+      <div class="error" id="nameError"></div>
       <button class="primary" id="startBtn">Comenzar juego</button>
     </section>
     <section id="quiz" class="screen">
@@ -44,6 +49,7 @@
     <section id="end" class="screen result">
       <div class="eyebrow">Resultado final</div><h2>Tu puntuación</h2><div class="big-score"><span id="finalScore">0</span>/10</div>
       <div class="result-message" id="resultMessage"></div><button class="primary" id="restartBtn">Jugar de nuevo</button>
+      <section class="leaderboard"><h3>Tabla de posiciones</h3><table><thead><tr><th>Posición</th><th>Estudiante</th><th>Puntos</th></tr></thead><tbody id="leaderRows"></tbody></table><div class="reset-note">La tabla de este dispositivo se reinicia en <strong id="resetClock">02:00:00</strong>.</div></section>
     </section>
   </main>
   <footer><span>Stephen Schlesinger · Stephen Kinzer</span><span>Fruta amarga: la CIA en Guatemala</span></footer>
@@ -61,15 +67,23 @@ const questions=[
  {q:"¿Para qué se organizaron viajes de periodistas a Centroamérica?",a:["Para que redactaran leyes agrarias","Para mostrarles una versión cuidadosamente preparada del conflicto","Para capacitarlos como agricultores","Para negociar la venta del ferrocarril"],c:1,e:"Las giras, entrevistas y materiales fueron organizados para orientar la cobertura favorable a la compañía."},
  {q:"¿Cuál es la mejor conclusión de los capítulos 4 al 6?",a:["El conflicto fue únicamente agrícola","La comunicación no tuvo importancia","Reforma, poder corporativo y propaganda estuvieron conectados","La United Fruit apoyó todas las reformas"],c:2,e:"Los capítulos conectan el proyecto reformista, los intereses corporativos afectados y la lucha por controlar el relato público."}
 ];
-let index=0,score=0,answered=false;
+const BOARD_KEY='frutaAmargaLeaderboardV1', TWO_HOURS=2*60*60*1000;
+let index=0,score=0,answered=false,player='',gameQuestions=[];
 const $=id=>document.getElementById(id);
+const shuffle=list=>{const a=[...list];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+function prepareQuestions(){gameQuestions=shuffle(questions).map(q=>{const correct=q.a[q.c],answers=shuffle(q.a);return{q:q.q,a:answers,c:answers.indexOf(correct),e:q.e}})}
+function getBoard(){let b;try{b=JSON.parse(localStorage.getItem(BOARD_KEY))}catch(e){}const now=Date.now();if(!b||!b.startedAt||now-b.startedAt>=TWO_HOURS){b={startedAt:now,entries:[]};localStorage.setItem(BOARD_KEY,JSON.stringify(b))}return b}
+function saveScore(){const b=getBoard(),id=Date.now()+'-'+Math.random().toString(16).slice(2);b.entries.push({id,name:player,score,time:Date.now()});b.entries.sort((a,z)=>z.score-a.score||a.time-z.time);b.entries=b.entries.slice(0,20);localStorage.setItem(BOARD_KEY,JSON.stringify(b));return id}
+function showBoard(myId){const b=getBoard();$('leaderRows').innerHTML=b.entries.length?b.entries.map((e,i)=>`<tr class="${e.id===myId?'me':''}"><td>${i+1}</td><td>${escapeHtml(e.name)}</td><td>${e.score}/10</td></tr>`).join(''):'<tr><td colspan="3">Todavía no hay resultados.</td></tr>';updateClock()}
+function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function updateClock(){const b=getBoard(),left=Math.max(0,TWO_HOURS-(Date.now()-b.startedAt)),h=String(Math.floor(left/3600000)).padStart(2,'0'),m=String(Math.floor(left%3600000/60000)).padStart(2,'0'),s=String(Math.floor(left%60000/1000)).padStart(2,'0');if($('resetClock'))$('resetClock').textContent=`${h}:${m}:${s}`}
 function screen(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(id).classList.add('active')}
-function render(){answered=false;$('feedback').classList.remove('show');$('nextBtn').classList.remove('show');$('number').textContent=`Pregunta ${index+1} de ${questions.length}`;$('question').textContent=questions[index].q;$('bar').style.width=`${index/questions.length*100}%`;$('answers').innerHTML='';questions[index].a.forEach((txt,i)=>{const b=document.createElement('button');b.className='answer';b.textContent=txt;b.onclick=()=>choose(i,b);$('answers').appendChild(b)})}
-function choose(i,button){if(answered)return;answered=true;const q=questions[index],buttons=[...document.querySelectorAll('.answer')];buttons.forEach((b,n)=>{b.disabled=true;if(n===q.c)b.classList.add('correct')});if(i===q.c){score++;$('score').textContent=score;$('feedbackTitle').textContent='¡Correcto!'}else{button.classList.add('wrong');$('feedbackTitle').textContent='Respuesta incorrecta'}$('explanation').textContent=q.e;$('feedback').classList.add('show');$('nextBtn').classList.add('show')}
-function next(){index++;if(index<questions.length)render();else finish()}
-function finish(){$('bar').style.width='100%';$('finalScore').textContent=score;$('resultMessage').textContent=score>=9?'Excelente: dominás los conceptos centrales.':score>=7?'Muy bien: comprendiste la relación entre reforma, poder y propaganda.':score>=5?'Buen intento: repasá las explicaciones y volvé a jugar.':'Conviene revisar la presentación y volver a intentarlo.';screen('end')}
-function restart(){index=0;score=0;$('score').textContent=0;screen('quiz');render()}
-$('startBtn').onclick=()=>{screen('quiz');render()};$('nextBtn').onclick=next;$('restartBtn').onclick=restart;
+function render(){answered=false;const q=gameQuestions[index];$('feedback').classList.remove('show');$('nextBtn').classList.remove('show');$('number').textContent=`Pregunta ${index+1} de ${gameQuestions.length}`;$('question').textContent=q.q;$('bar').style.width=`${index/gameQuestions.length*100}%`;$('answers').innerHTML='';q.a.forEach((txt,i)=>{const b=document.createElement('button');b.className='answer';b.textContent=txt;b.onclick=()=>choose(i,b);$('answers').appendChild(b)})}
+function choose(i,button){if(answered)return;answered=true;const q=gameQuestions[index],buttons=[...document.querySelectorAll('.answer')];buttons.forEach((b,n)=>{b.disabled=true;if(n===q.c)b.classList.add('correct')});if(i===q.c){score++;$('score').textContent=score;$('feedbackTitle').textContent='¡Correcto!'}else{button.classList.add('wrong');$('feedbackTitle').textContent='Respuesta incorrecta'}$('explanation').textContent=q.e;$('feedback').classList.add('show');$('nextBtn').classList.add('show')}
+function next(){index++;if(index<gameQuestions.length)render();else finish()}
+function finish(){$('bar').style.width='100%';$('finalScore').textContent=score;$('resultMessage').textContent=score>=9?'Excelente: dominás los conceptos centrales.':score>=7?'Muy bien: comprendiste la relación entre reforma, poder y propaganda.':score>=5?'Buen intento: repasá las explicaciones y volvé a jugar.':'Conviene revisar la presentación y volver a intentarlo.';const myId=saveScore();showBoard(myId);screen('end')}
+function restart(){index=0;score=0;prepareQuestions();$('score').textContent=0;screen('quiz');render()}
+$('startBtn').onclick=()=>{player=$('playerName').value.trim();if(!player){$('nameError').textContent='Escribí tu nombre antes de comenzar.';$('playerName').focus();return}$('nameError').textContent='';getBoard();prepareQuestions();screen('quiz');render()};$('playerName').onkeydown=e=>{if(e.key==='Enter')$('startBtn').click()};$('nextBtn').onclick=next;$('restartBtn').onclick=restart;setInterval(updateClock,1000);
 </script>
 </body>
 </html>
