@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hecho o manipulación · Fruta amarga</title>
+  <style>
+    :root{--vino:#8f2947;--vino2:#b94268;--crema:#f2eddd;--tinta:#1c191c;--oscuro:#28252d;--gris:#756e69;--verde:#29735c;--rojo:#a82f45}
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(135deg,#201e24,#34303a);color:var(--tinta);font-family:Inter,Arial,sans-serif;min-height:100vh;display:grid;place-items:center;padding:22px}
+    .app{width:min(980px,100%);background:var(--crema);border-radius:22px;overflow:hidden;box-shadow:0 22px 70px #0008}
+    header{background:var(--oscuro);color:#fff;padding:22px 30px;display:flex;justify-content:space-between;align-items:center;gap:18px}
+    .eyebrow{font-size:.75rem;letter-spacing:.15em;text-transform:uppercase;color:#df9bb0;font-weight:800}.brand{font-family:Georgia,serif;font-size:1.45rem;font-weight:700;margin-top:4px}
+    .score{background:var(--vino);padding:10px 16px;border-radius:999px;font-weight:800;white-space:nowrap}
+    main{padding:34px}.screen{display:none}.screen.active{display:block}
+    h1,h2{font-family:Georgia,serif;margin:0 0 18px;line-height:1.08}h1{font-size:clamp(2.2rem,6vw,4.6rem);color:var(--vino)}h2{font-size:clamp(1.55rem,4vw,2.6rem)}
+    p{line-height:1.55;color:#4a4442;font-size:1.08rem}.intro{max-width:720px}.meta{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0}.pill{border:1px solid #bdb3a4;border-radius:999px;padding:8px 13px;color:var(--gris);font-weight:700}
+    button{border:0;cursor:pointer;font:inherit}.primary{background:var(--vino);color:#fff;padding:15px 24px;border-radius:12px;font-weight:800;font-size:1.05rem;box-shadow:0 7px 0 #641b32}.primary:hover{background:var(--vino2)}.primary:active{transform:translateY(3px);box-shadow:0 4px 0 #641b32}
+    .progress{height:8px;background:#d8d0c1;border-radius:99px;overflow:hidden;margin-bottom:28px}.bar{height:100%;background:var(--vino);transition:width .35s}
+    .number{color:var(--vino);font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}.answers{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:28px 0}
+    .answer{background:#fff;border:2px solid #d5ccbe;border-radius:14px;text-align:left;padding:18px;font-weight:750;min-height:76px;transition:.15s}.answer:hover:not(:disabled){border-color:var(--vino);transform:translateY(-2px)}.answer:disabled{cursor:default}.answer.correct{background:#dcefe7;border-color:var(--verde)}.answer.wrong{background:#f3dce1;border-color:var(--rojo)}
+    .feedback{display:none;border-left:6px solid var(--vino);background:#e8e0d2;padding:17px 20px;border-radius:8px;margin:18px 0}.feedback.show{display:block}.feedback strong{display:block;margin-bottom:6px}.next{display:none}.next.show{display:inline-block}
+    .result{text-align:center;padding:20px 0 35px}.big-score{font-family:Georgia,serif;color:var(--vino);font-size:clamp(4rem,12vw,8rem);font-weight:800;line-height:1}.result-message{font-size:1.25rem;font-weight:800;margin:12px 0 28px}
+    footer{padding:15px 30px;background:#e6dece;color:var(--gris);font-size:.82rem;display:flex;justify-content:space-between}
+    @media(max-width:650px){header{padding:18px}.brand{font-size:1.05rem}main{padding:24px 18px}.answers{grid-template-columns:1fr}.answer{min-height:62px}footer{padding:12px 18px}}
+  </style>
+</head>
+<body>
+<section class="app">
+  <header><div><div class="eyebrow">Lectura crítica · capítulos 4–6</div><div class="brand">FRUTA AMARGA</div></div><div class="score">Puntos: <span id="score">0</span></div></header>
+  <main>
+    <section id="start" class="screen active">
+      <div class="eyebrow">Juego interactivo</div>
+      <h1>Hecho o<br>manipulación</h1>
+      <p class="intro">Poné a prueba lo aprendido sobre la reforma agraria, la United Fruit Company y la construcción propagandística del conflicto guatemalteco.</p>
+      <div class="meta"><span class="pill">10 preguntas</span><span class="pill">Respuesta inmediata</span><span class="pill">5–10 minutos</span></div>
+      <button class="primary" id="startBtn">Comenzar juego</button>
+    </section>
+    <section id="quiz" class="screen">
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="number" id="number"></div><h2 id="question"></h2><div class="answers" id="answers"></div>
+      <div class="feedback" id="feedback"><strong id="feedbackTitle"></strong><span id="explanation"></span></div>
+      <button class="primary next" id="nextBtn">Siguiente pregunta</button>
+    </section>
+    <section id="end" class="screen result">
+      <div class="eyebrow">Resultado final</div><h2>Tu puntuación</h2><div class="big-score"><span id="finalScore">0</span>/10</div>
+      <div class="result-message" id="resultMessage"></div><button class="primary" id="restartBtn">Jugar de nuevo</button>
+    </section>
+  </main>
+  <footer><span>Stephen Schlesinger · Stephen Kinzer</span><span>Fruta amarga: la CIA en Guatemala</span></footer>
+</section>
+<script>
+const questions=[
+ {q:"¿Cuál era uno de los objetivos económicos planteados por Jacobo Árbenz?",a:["Convertir Guatemala en un país económicamente independiente","Eliminar todas las empresas privadas","Suspender las elecciones nacionales","Depender únicamente de la exportación de banano"],c:0,e:"Árbenz propuso superar la economía semicolonial, modernizar el capitalismo nacional y elevar el nivel de vida."},
+ {q:"¿Qué tipo de tierras podía expropiar el Decreto 900?",a:["Todas las viviendas urbanas","Únicamente tierras ociosas de grandes propiedades","Cualquier finca productiva sin compensación","Solo propiedades de funcionarios públicos"],c:1,e:"La ley se dirigía a porciones no cultivadas de grandes fincas y contemplaba compensación mediante bonos."},
+ {q:"¿Aproximadamente cuántas familias fueron beneficiadas por la reforma agraria?",a:["1,000","10,000","100,000","Un millón"],c:2,e:"El libro indica que cerca de 100,000 familias recibieron tierra durante los 18 meses de aplicación."},
+ {q:"¿Qué significa que se distribuyeron 600,000 hectáreas?",a:["La cantidad de dinero entregada","La superficie total de tierra repartida","El número de trabajadores contratados","La distancia de una carretera"],c:1,e:"La hectárea es una medida de superficie. Una hectárea equivale a 10,000 metros cuadrados."},
+ {q:"¿Qué combinación resume mejor el poder de la United Fruit Company?",a:["Escuelas, hospitales y universidades","Tierra, ferrocarril, puerto y transporte marítimo","Radio, televisión y cine","Bancos, iglesias y municipalidades"],c:1,e:"Su influencia integraba plantaciones, ferrocarriles, Puerto Barrios y rutas de exportación."},
+ {q:"¿Por qué surgió una disputa sobre la compensación de las tierras expropiadas?",a:["La compañía nunca había declarado sus propiedades","El gobierno utilizó el valor fiscal declarado por la propia empresa","La reforma prohibía cualquier pago","Los campesinos fijaban directamente el precio"],c:1,e:"La compensación se calculaba según el valor fiscal declarado, que la compañía había mantenido bajo para pagar menos impuestos."},
+ {q:"¿Quién fue Edward Bernays dentro del conflicto narrado?",a:["Un dirigente campesino","El presidente de Guatemala","Un asesor de relaciones públicas de United Fruit","Un juez de la Corte Suprema"],c:2,e:"Bernays organizó estrategias para influir en periodistas y en la opinión pública estadounidense."},
+ {q:"¿Qué buscaba la manipulación informativa sobre Guatemala?",a:["Presentar un conflicto económico como amenaza comunista","Promover el turismo regional","Explicar únicamente el cultivo del banano","Defender públicamente el Decreto 900"],c:0,e:"La campaña vinculó las reformas guatemaltecas con el comunismo para favorecer la oposición al gobierno de Árbenz."},
+ {q:"¿Para qué se organizaron viajes de periodistas a Centroamérica?",a:["Para que redactaran leyes agrarias","Para mostrarles una versión cuidadosamente preparada del conflicto","Para capacitarlos como agricultores","Para negociar la venta del ferrocarril"],c:1,e:"Las giras, entrevistas y materiales fueron organizados para orientar la cobertura favorable a la compañía."},
+ {q:"¿Cuál es la mejor conclusión de los capítulos 4 al 6?",a:["El conflicto fue únicamente agrícola","La comunicación no tuvo importancia","Reforma, poder corporativo y propaganda estuvieron conectados","La United Fruit apoyó todas las reformas"],c:2,e:"Los capítulos conectan el proyecto reformista, los intereses corporativos afectados y la lucha por controlar el relato público."}
+];
+let index=0,score=0,answered=false;
+const $=id=>document.getElementById(id);
+function screen(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(id).classList.add('active')}
+function render(){answered=false;$('feedback').classList.remove('show');$('nextBtn').classList.remove('show');$('number').textContent=`Pregunta ${index+1} de ${questions.length}`;$('question').textContent=questions[index].q;$('bar').style.width=`${index/questions.length*100}%`;$('answers').innerHTML='';questions[index].a.forEach((txt,i)=>{const b=document.createElement('button');b.className='answer';b.textContent=txt;b.onclick=()=>choose(i,b);$('answers').appendChild(b)})}
+function choose(i,button){if(answered)return;answered=true;const q=questions[index],buttons=[...document.querySelectorAll('.answer')];buttons.forEach((b,n)=>{b.disabled=true;if(n===q.c)b.classList.add('correct')});if(i===q.c){score++;$('score').textContent=score;$('feedbackTitle').textContent='¡Correcto!'}else{button.classList.add('wrong');$('feedbackTitle').textContent='Respuesta incorrecta'}$('explanation').textContent=q.e;$('feedback').classList.add('show');$('nextBtn').classList.add('show')}
+function next(){index++;if(index<questions.length)render();else finish()}
+function finish(){$('bar').style.width='100%';$('finalScore').textContent=score;$('resultMessage').textContent=score>=9?'Excelente: dominás los conceptos centrales.':score>=7?'Muy bien: comprendiste la relación entre reforma, poder y propaganda.':score>=5?'Buen intento: repasá las explicaciones y volvé a jugar.':'Conviene revisar la presentación y volver a intentarlo.';screen('end')}
+function restart(){index=0;score=0;$('score').textContent=0;screen('quiz');render()}
+$('startBtn').onclick=()=>{screen('quiz');render()};$('nextBtn').onclick=next;$('restartBtn').onclick=restart;
+</script>
+</body>
+</html>
