@@ -63,7 +63,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDocs, query, setDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { getFirestore, addDoc, collection, getDocs, query, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 const firebaseConfig={apiKey:"AIzaSyBlPcPrLXXIAN5Cv-bBale6vccr7oNOKWA",authDomain:"juego-fruta-amarga.firebaseapp.com",projectId:"juego-fruta-amarga",storageBucket:"juego-fruta-amarga.firebasestorage.app",messagingSenderId:"212896504768",appId:"1:212896504768:web:5f27640365c0be233ec625"};
 const firebaseApp=initializeApp(firebaseConfig),auth=getAuth(firebaseApp),db=getFirestore(firebaseApp);
 const questions=[
@@ -85,7 +85,7 @@ const shuffle=list=>{const a=[...list];for(let i=a.length-1;i>0;i--){const j=Mat
 function prepareQuestions(){gameQuestions=shuffle(questions).map(q=>{const correct=q.a[q.c],answers=shuffle(q.a);return{q:q.q,a:answers,c:answers.indexOf(correct),e:q.e}})}
 const sessionId=()=>Math.floor(Date.now()/TWO_HOURS);
 async function connectFirebase(){if(!auth.currentUser)await signInAnonymously(auth);firebaseReady=true}
-async function saveScore(){await connectFirebase();const id=`${sessionId()}_${auth.currentUser.uid}`;try{await setDoc(doc(db,'scores',id),{name:player,score,session:sessionId(),createdAt:serverTimestamp(),uid:auth.currentUser.uid})}catch(e){if(e.code!=='permission-denied'&&e.code!=='already-exists')throw e}return id}
+async function saveScore(){await connectFirebase();const result=await addDoc(collection(db,'scores'),{name:player,score,session:sessionId(),createdAt:serverTimestamp(),uid:auth.currentUser.uid});return result.id}
 async function showBoard(myId,target='leaderRows'){await connectFirebase();const snapshot=await getDocs(query(collection(db,'scores'),where('session','==',sessionId()))),entries=snapshot.docs.map(d=>({id:d.id,...d.data()}));entries.sort((a,z)=>z.score-a.score||((a.createdAt?.seconds||0)-(z.createdAt?.seconds||0)));$(target).innerHTML=entries.length?entries.slice(0,20).map((e,i)=>`<tr class="${e.id===myId?'me':''}"><td>${i+1}</td><td>${escapeHtml(e.name)}</td><td>${e.score}/10</td></tr>`).join(''):'<tr><td colspan="3">Todavía no hay resultados.</td></tr>';updateClock()}
 function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function updateClock(){const left=TWO_HOURS-(Date.now()%TWO_HOURS),h=String(Math.floor(left/3600000)).padStart(2,'0'),m=String(Math.floor(left%3600000/60000)).padStart(2,'0'),s=String(Math.floor(left%60000/1000)).padStart(2,'0'),value=`${h}:${m}:${s}`;if($('resetClock'))$('resetClock').textContent=value;if($('resetClockPublic'))$('resetClockPublic').textContent=value}
